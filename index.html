@@ -30,10 +30,10 @@ const SITE = {
   // Your available days live in availability.js (use owner.html to change them).
   availability: AVAILABILITY,
 
-  // Optional: paste a form endpoint (e.g. from formspree.io) and booking requests
-  // are delivered straight to your inbox. If left empty, the visitor's own email
-  // app opens with the request pre-written and addressed to you.
-  formEndpoint: ""
+  // Booking requests are emailed to you through this form service. If it is
+  // empty or the service fails, the visitor's own email app opens instead with
+  // the request pre-written and addressed to you.
+  formEndpoint: "https://formsubmit.co/ajax/zoeybarnettflute@gmail.com"
 };
 </script>
 
@@ -523,20 +523,21 @@ $("view-contact").addEventListener("submit", async e => {
     `Phone: ${phone}`
   ];
 
+  let sent = false;
   if (SITE.formEndpoint) {
     $("send").disabled = true;
     try {
       const res = await fetch(SITE.formEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ _subject: subject, booking: booking.label, details: booking.detail, date: iso(picked), name, email, phone })
+        body: JSON.stringify({ _subject: subject, booking: booking.label, details: booking.detail, date: longDate(picked), limited_hours: limitedNote(picked) || undefined, name, email, phone, _template: "table", _captcha: "false" })
       });
-      if (!res.ok) throw new Error(res.status);
-    } catch {
-      $("send").disabled = false;
-      return err.textContent = `Something went wrong sending your request. Please email ${SITE.email} directly.`;
-    }
+      const out = await res.json().catch(() => ({}));
+      sent = res.ok && String(out.success) !== "false";
+    } catch {}
     $("send").disabled = false;
+  }
+  if (sent) {
     $("done-title").textContent = "Request sent";
     $("done-text").textContent = `I'll be in touch soon to arrange the time and place for ${longDate(picked)}.`;
   } else {
